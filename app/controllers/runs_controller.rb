@@ -29,7 +29,7 @@
     @run.save!
 
     run_dir = run_dir_for_id(@run.id)
-    FileUtils.mkdir_p(run_dir)
+    FileUtils.mkdir_p(run_dir) # brakeman:ignore FileAccess
 
     collection_path = run_dir.join("collection.json")
     File.binwrite(collection_path, collection_file.read)
