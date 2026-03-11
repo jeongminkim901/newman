@@ -1,0 +1,76 @@
+﻿<h1>Run <%= @run.id %></h1>
+
+<div class="run-meta">
+  <div class="card">
+    <div class="meta-grid">
+      <div>
+        <div class="meta-label">Name</div>
+        <div class="meta-value"><%= @run.name.presence || "-" %></div>
+      </div>
+      <div>
+        <div class="meta-label">Mode</div>
+        <div class="meta-value"><%= @run.run_mode %></div>
+      </div>
+      <div>
+        <div class="meta-label">Status</div>
+        <div class="meta-value"><span class="badge badge-<%= @run.status %>"><%= @run.status %></span></div>
+      </div>
+      <div>
+        <div class="meta-label">Queued</div>
+        <div class="meta-value"><%= @run.queued_at || "-" %></div>
+      </div>
+      <div>
+        <div class="meta-label">Started</div>
+        <div class="meta-value"><%= @run.started_at || "-" %></div>
+      </div>
+      <div>
+        <div class="meta-label">Finished</div>
+        <div class="meta-value"><%= @run.finished_at || "-" %></div>
+      </div>
+      <div>
+        <div class="meta-label">Duration</div>
+        <div class="meta-value"><%= @run.duration_ms ? "#{@run.duration_ms} ms" : "-" %></div>
+      </div>
+      <div>
+        <div class="meta-label">Exit Code</div>
+        <div class="meta-value"><%= @run.exit_code.nil? ? "-" : @run.exit_code %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="meta-grid">
+    <div>
+      <div class="meta-label">Collection</div>
+      <div class="meta-value"><%= @run.collection_path %></div>
+    </div>
+    <div>
+      <div class="meta-label">Environment</div>
+      <div class="meta-value"><%= @run.environment_path || "-" %></div>
+    </div>
+  </div>
+
+  <div class="report-links">
+    <% if @run.report_html_path.present? %>
+      <a class="btn" href="<%= report_run_path(@run, kind: 'html') %>">View HTML Report</a>
+    <% end %>
+    <% if @run.report_json_path.present? %>
+      <a class="btn ghost" href="<%= report_run_path(@run, kind: 'json') %>">View JSON Report</a>
+    <% end %>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Stdout</h2>
+  <pre class="log"><%= @run.stdout.to_s %></pre>
+</div>
+
+<div class="card">
+  <h2>Stderr</h2>
+  <pre class="log error"><%= @run.stderr.to_s %></pre>
+</div>
+
+<div class="page-actions">
+  <a class="btn ghost" href="<%= runs_path %>">Back to runs</a>
+</div>

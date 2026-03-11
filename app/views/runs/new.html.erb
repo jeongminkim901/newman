@@ -1,0 +1,57 @@
+﻿<h1>New Run</h1>
+
+<%= form_with model: @run, url: runs_path, local: true, multipart: true, class: "form" do |f| %>
+  <% if @run.errors.any? %>
+    <div class="alert alert-error">
+      <strong>Errors:</strong>
+      <ul>
+        <% @run.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-row">
+    <label>Name (optional)</label>
+    <%= f.text_field :name %>
+  </div>
+
+  <div class="form-row">
+    <label>Postman Collection JSON (required)</label>
+    <%= f.file_field :collection_file, required: true %>
+  </div>
+
+  <div class="form-row">
+    <label>Postman Environment JSON (optional)</label>
+    <%= f.file_field :environment_file %>
+  </div>
+
+  <div class="form-grid">
+    <div class="form-row">
+      <label>IP (optional)</label>
+      <%= f.text_field :ip %>
+    </div>
+    <div class="form-row">
+      <label>Token (optional)</label>
+      <%= f.text_field :token %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label>Extra Vars JSON (optional)</label>
+    <textarea name="run[extra_vars_json]" rows="6" placeholder='{"key":"value"} or [{"key":"k","value":"v"}]'></textarea>
+  </div>
+
+  <div class="form-row checkbox">
+    <label>
+      <input type="checkbox" name="run[async]" value="1" />
+      Run in background (queue)
+    </label>
+  </div>
+
+  <div class="form-actions">
+    <%= f.submit "Run Newman", class: "btn primary" %>
+    <a class="btn ghost" href="<%= runs_path %>">Back to runs</a>
+  </div>
+<% end %>

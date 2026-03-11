@@ -1,0 +1,13 @@
+﻿{
+  "name": "postman-rails-runner",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Rails UI to run Newman on Postman collections",
+  "scripts": {
+    "newman:version": "newman -v"
+  },
+  "dependencies": {
+    "newman": "^6.2.1",
+    "newman-reporter-htmlextra": "^1.23.1"
+  }
+}

@@ -1,0 +1,34 @@
+﻿<h1>Runs</h1>
+
+<div class="page-actions">
+  <a class="btn" href="<%= new_run_path %>">New Run</a>
+</div>
+
+<div class="card">
+  <table class="runs-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Mode</th>
+        <th>Status</th>
+        <th>Started</th>
+        <th>Finished</th>
+        <th>Duration</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @runs.each do |run| %>
+        <tr>
+          <td><a href="<%= run_path(run) %>"><%= run.id %></a></td>
+          <td><%= run.name.presence || "-" %></td>
+          <td><%= run.run_mode %></td>
+          <td><span class="badge badge-<%= run.status %>"><%= run.status %></span></td>
+          <td><%= run.started_at %></td>
+          <td><%= run.finished_at %></td>
+          <td><%= run.duration_ms ? "#{run.duration_ms} ms" : "-" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
