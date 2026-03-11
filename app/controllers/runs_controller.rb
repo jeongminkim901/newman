@@ -28,8 +28,7 @@
 
     @run.save!
 
-    # brakeman:ignore FileAccess
-    run_dir = run_dir_for(@run)
+    run_dir = run_dir_for_id(@run.id)
     FileUtils.mkdir_p(run_dir)
 
     collection_path = run_dir.join("collection.json")
@@ -79,21 +78,20 @@
   end
 
   def show
-    @run = Run.find(params[:id])
-    @report = load_report(report_path_for(@run, "json"))
+    @run = Run.find(params[:id].to_i)
+    @report = load_report(report_path_for_id(@run.id, "json"))
     @executions = build_executions(@report)
     @stats = build_stats(@executions)
   end
 
   def report
-    @run = Run.find(params[:id])
+    @run = Run.find(params[:id].to_i)
     kind = params[:kind].to_s
     unless %w[json html].include?(kind)
       return redirect_to run_path(@run), alert: "Report not found"
     end
 
-    # brakeman:ignore FileAccess
-    path = report_path_for(@run, kind)
+    path = report_path_for_id(@run.id, kind)
     if path && File.exist?(path)
       send_file path, disposition: "inline"
     else
@@ -102,13 +100,12 @@
   end
 
   def stream
-    @run = Run.find(params[:id])
+    @run = Run.find(params[:id].to_i)
     response.headers["Content-Type"] = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
 
-    # brakeman:ignore FileAccess
-    log_path = log_path_for(@run)
+    log_path = log_path_for_id(@run.id)
     last_pos = 0
 
     begin
@@ -210,11 +207,11 @@
     }
   end
 
-  def run_dir_for(run)
-    Rails.root.join("storage", "runs", run.id.to_i.to_s)
+  def run_dir_for_id(run_id)
+    Rails.root.join("storage", "runs", run_id.to_i.to_s)
   end
 
-  def report_path_for(run, kind)
+  def report_path_for_id(run_id, kind)
     kind = kind.to_s
     return nil unless %w[json html].include?(kind)
 
@@ -225,10 +222,10 @@
     end
     return nil if file_name.nil?
 
-    run_dir_for(run).join(file_name).to_s
+    run_dir_for_id(run_id).join(file_name).to_s
   end
 
-  def log_path_for(run)
-    run_dir_for(run).join("run.log").to_s
+  def log_path_for_id(run_id)
+    run_dir_for_id(run_id).join("run.log").to_s
   end
 end
