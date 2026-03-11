@@ -15,21 +15,23 @@
     async = params.dig(:run, :async) == "1"
     collection_file = params.dig(:run, :collection_file)
 
-    @run = Run.new(
-      name: params.dig(:run, :name),
-      status: "queued",
-      run_mode: async ? "async" : "sync"
-    )
+    @run = Run.new
 
     if collection_file.blank?
       @run.errors.add(:collection_path, "collection file is required")
       return render :new, status: :unprocessable_entity
     end
 
-    @run.save!
+    @run = Run.create!(
+      name: params.dig(:run, :name),
+      status: "queued",
+      run_mode: async ? "async" : "sync",
+      collection_path: "pending"
+    )
 
-    run_dir = run_dir_for_id(@run.id)
-    FileUtils.mkdir_p(run_dir) # brakeman:ignore FileAccess
+    run_id = @run.id.to_i
+    run_dir = run_dir_for_id(run_id)
+    FileUtils.mkdir_p(run_dir)
 
     collection_path = run_dir.join("collection.json")
     File.binwrite(collection_path, collection_file.read)
