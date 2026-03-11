@@ -2,6 +2,7 @@
   require "open3"
   require "json"
   require "fileutils"
+  require "securerandom"
 
   def index
     @runs = Run.order(created_at: :desc)
@@ -14,6 +15,7 @@
   def create
     async = params.dig(:run, :async) == "1"
     collection_file = params.dig(:run, :collection_file)
+    run_mode = async ? "async" : "sync"
 
     @run = Run.new
 
@@ -23,14 +25,11 @@
     end
 
     @run = Run.create!(
-      name: params.dig(:run, :name),
       status: "queued",
-      run_mode: async ? "async" : "sync",
       collection_path: "pending"
     )
 
-    run_id = @run.id.to_i
-    run_dir = run_dir_for_id(run_id)
+    run_dir = run_dir_for_token(SecureRandom.hex(12))
     FileUtils.mkdir_p(run_dir)
 
     collection_path = run_dir.join("collection.json")
@@ -53,6 +52,8 @@
     report_html_path = run_dir.join("report.html")
 
     @run.update!(
+      name: params.dig(:run, :name),
+      run_mode: run_mode,
       collection_path: collection_path.to_s,
       environment_path: environment_path&.to_s,
       input_vars_json: vars.any? ? vars.to_json : nil,
@@ -212,6 +213,10 @@
 
   def run_dir_for_id(run_id)
     Rails.root.join("storage", "runs", run_id.to_i.to_s)
+  end
+
+  def run_dir_for_token(token)
+    Rails.root.join("storage", "runs", token.to_s)
   end
 
   def report_path_for_id(run_id, kind)

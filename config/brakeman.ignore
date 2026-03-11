@@ -1,17 +1,4 @@
 {
-  "ignored_warnings": [
-    {
-      "warning_type": "File Access",
-      "warning_code": 16,
-      "fingerprint": "fc0f9f108c647262d9d2a22f0d6118a4ebee918b0677f597e5f4a191825bd213",
-      "check_name": "FileAccess",
-      "message": "Model attribute used in file name",
-      "file": "app/controllers/runs_controller.rb",
-      "line": 32,
-      "link": "https://brakemanscanner.org/docs/warning_types/file_access/",
-      "confidence": "Weak",
-      "note": "Run directory path uses DB id, false positive."
-    }
-  ],
-  "updated": "2026-03-11 14:05:00 +0900"
+  "ignored_warnings": [],
+  "updated": "2026-03-11 14:53:00 +0900"
 }
