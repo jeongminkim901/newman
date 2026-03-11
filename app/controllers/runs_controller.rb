@@ -79,6 +79,9 @@
 
   def show
     @run = Run.find(params[:id])
+    @report = load_report(@run.report_json_path)
+    @executions = build_executions(@report)
+    @stats = build_stats(@executions)
   end
 
   def report
@@ -94,6 +97,37 @@
       send_file path, disposition: "inline"
     else
       redirect_to run_path(@run), alert: "Report not found"
+    end
+  end
+
+  def stream
+    @run = Run.find(params[:id])
+    response.headers["Content-Type"] = "text/event-stream"
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+
+    log_path = @run.log_path
+    last_pos = 0
+
+    begin
+      loop do
+        if log_path.present? && File.exist?(log_path)
+          File.open(log_path, "r") do |file|
+            file.seek(last_pos)
+            file.each_line do |line|
+              response.stream.write("data: #{line.rstrip}\n\n")
+            end
+            last_pos = file.pos
+          end
+        end
+
+        break unless @run.reload.status.in?(%w[queued running])
+        sleep 0.8
+      end
+    rescue => e
+      response.stream.write("event: error\ndata: #{e.message}\n\n")
+    ensure
+      response.stream.close
     end
   end
 
@@ -124,5 +158,53 @@
     end
 
     vars
+  end
+
+  def load_report(path)
+    return nil if path.blank? || !File.exist?(path)
+    JSON.parse(File.read(path))
+  rescue
+    nil
+  end
+
+  def build_executions(report)
+    return [] unless report.is_a?(Hash)
+
+    executions = report.dig("run", "executions") || []
+    executions.map do |ex|
+      response = ex["response"] || {}
+      code = response["code"]
+      method = ex.dig("item", "request", "method")
+      url = ex.dig("item", "request", "url", "raw") || ex.dig("item", "request", "url")
+      name = ex.dig("item", "name")
+      time_ms = response["responseTime"]
+      failed = (ex["assertions"] || []).any? { |a| a["error"].present? }
+      error = ex["error"]&.dig("message")
+
+      {
+        name: name,
+        method: method,
+        url: url,
+        status: code,
+        time_ms: time_ms,
+        failed: failed,
+        error: error,
+        status_group: code ? (code / 100) : nil
+      }
+    end
+  end
+
+  def build_stats(executions)
+    total = executions.length
+    failed = executions.count { |e| e[:failed] || e[:error].present? }
+    groups = executions.group_by { |e| e[:status_group] }
+    {
+      total: total,
+      failed: failed,
+      ok: groups[2]&.length.to_i,
+      redirect: groups[3]&.length.to_i,
+      client_error: groups[4]&.length.to_i,
+      server_error: groups[5]&.length.to_i
+    }
   end
 end

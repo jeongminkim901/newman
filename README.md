@@ -13,6 +13,7 @@ $env:Path = 'C:\Ruby33-x64\bin;' + $env:Path
 bundle install
 npm install
 bundle exec rails db:migrate
+bundle exec rails db:setup:queue
 ```
 
 ## Run
@@ -23,8 +24,11 @@ Open http://localhost:3000
 
 ## Background Runs (Queue)
 - Check **Run in background (queue)** on the new run form.
-- In development this uses the `:async` adapter (in-process). The job runs in the Rails server process.
-- For a persistent queue, switch the adapter to Solid Queue and run a worker.
+- Start a worker:
+```powershell
+bundle exec rails solid_queue:start
+```
 
 ## Notes
 - Reports are stored under `storage/runs/<id>/`.
+- Live logs stream while a run is queued or running.

@@ -215,7 +215,7 @@ textarea {
   margin-top: 16px;
 }
 
-.log {
+.log {\n  max-height: 280px;\n  overflow: auto;
   background: rgba(0, 0, 0, 0.35);
   border-radius: 12px;
   padding: 14px;
@@ -239,3 +239,64 @@ textarea {
     gap: 10px;
   }
 }
+
+.summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-bottom: 18px;
+}
+
+.stat {
+  text-align: left;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--ink);
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chip.active {
+  background: rgba(80, 210, 194, 0.2);
+  border-color: rgba(80, 210, 194, 0.4);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.muted {
+  color: var(--muted);
+}
+

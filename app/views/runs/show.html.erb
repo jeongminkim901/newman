@@ -61,9 +61,74 @@
   </div>
 </div>
 
+<% if @stats[:total] > 0 %>
+  <div class="summary-grid">
+    <div class="card stat">
+      <div class="stat-label">Total</div>
+      <div class="stat-value"><%= @stats[:total] %></div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">Failed</div>
+      <div class="stat-value"><%= @stats[:failed] %></div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">2xx</div>
+      <div class="stat-value"><%= @stats[:ok] %></div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">3xx</div>
+      <div class="stat-value"><%= @stats[:redirect] %></div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">4xx</div>
+      <div class="stat-value"><%= @stats[:client_error] %></div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">5xx</div>
+      <div class="stat-value"><%= @stats[:server_error] %></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="filter-bar">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="2">2xx</button>
+      <button class="chip" data-filter="3">3xx</button>
+      <button class="chip" data-filter="4">4xx</button>
+      <button class="chip" data-filter="5">5xx</button>
+      <button class="chip" data-filter="error">Errors</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="runs-table" id="exec-table">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Status</th>
+            <th>Time</th>
+            <th>Name</th>
+            <th>URL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @executions.each do |ex| %>
+            <tr data-status-group="<%= ex[:status_group] %>" data-failed="<%= ex[:failed] || ex[:error].present? %>">
+              <td class="mono"><%= ex[:method] %></td>
+              <td><%= ex[:status] || "-" %></td>
+              <td><%= ex[:time_ms] ? "#{ex[:time_ms]} ms" : "-" %></td>
+              <td><%= ex[:name] %></td>
+              <td class="muted"><%= ex[:url] %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% end %>
+
 <div class="card">
-  <h2>Stdout</h2>
-  <pre class="log"><%= @run.stdout.to_s %></pre>
+  <h2>Live Logs</h2>
+  <pre class="log" id="log-stream" data-run-id="<%= @run.id %>" data-status="<%= @run.status %>"><%= @run.stdout.to_s %></pre>
 </div>
 
 <div class="card">
@@ -74,3 +139,43 @@
 <div class="page-actions">
   <a class="btn ghost" href="<%= runs_path %>">Back to runs</a>
 </div>
+
+<script>
+  (function() {
+    var logEl = document.getElementById("log-stream");
+    if (!logEl) return;
+
+    var status = logEl.dataset.status;
+    if (status === "queued" || status === "running") {
+      var source = new EventSource("/runs/" + logEl.dataset.runId + "/stream");
+      source.onmessage = function(ev) {
+        logEl.textContent += ev.data + "\n";
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+      source.onerror = function() {
+        source.close();
+      };
+    }
+
+    var chips = document.querySelectorAll(".chip");
+    var rows = document.querySelectorAll("#exec-table tbody tr");
+    chips.forEach(function(chip) {
+      chip.addEventListener("click", function() {
+        chips.forEach(function(c) { c.classList.remove("active"); });
+        chip.classList.add("active");
+        var filter = chip.dataset.filter;
+        rows.forEach(function(row) {
+          if (filter === "all") {
+            row.style.display = "";
+            return;
+          }
+          if (filter === "error") {
+            row.style.display = row.dataset.failed === "true" ? "" : "none";
+            return;
+          }
+          row.style.display = row.dataset.statusGroup === filter ? "" : "none";
+        });
+      });
+    });
+  })();
+</script>
