@@ -79,9 +79,10 @@
 
   def show
     @run = Run.find(params[:id].to_i)
-    @report = load_report(report_path_for_id(@run.id, "json"))
+    @report = load_report(@run.report_json_text)
     @executions = build_executions(@report)
     @stats = build_stats(@executions)
+    @failed_executions = @executions.select { |ex| ex[:failed] || ex[:error].present? }
   end
 
   def report
@@ -91,9 +92,10 @@
       return redirect_to run_path(@run), alert: "Report not found"
     end
 
-    path = report_path_for_id(@run.id, kind)
-    if path && File.exist?(path)
-      send_file path, disposition: "inline"
+    data = report_data_for(@run, kind)
+    if data.present?
+      content_type = kind == "json" ? "application/json" : "text/html"
+      send_data data, type: content_type, disposition: "inline"
     else
       redirect_to run_path(@run), alert: "Report not found"
     end
@@ -105,22 +107,21 @@
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
 
-    log_path = log_path_for_id(@run.id)
-    last_pos = 0
+    last_len = 0
 
     begin
       loop do
-        if log_path && File.exist?(log_path)
-          File.open(log_path, "r") do |file|
-            file.seek(last_pos)
-            file.each_line do |line|
-              response.stream.write("data: #{line.rstrip}\n\n")
-            end
-            last_pos = file.pos
+        @run.reload
+        log_text = @run.log_text.to_s
+        if log_text.length > last_len
+          chunk = log_text[last_len..]
+          chunk.to_s.each_line do |line|
+            response.stream.write("data: #{line.rstrip}\n\n")
           end
+          last_len = log_text.length
         end
 
-        break unless @run.reload.status.in?(%w[queued running])
+        break unless @run.status.in?(%w[queued running])
         sleep 0.8
       end
     rescue => e
@@ -227,5 +228,13 @@
 
   def log_path_for_id(run_id)
     run_dir_for_id(run_id).join("run.log").to_s
+  end
+
+  def report_data_for(run, kind)
+    if kind == "json"
+      run.report_json_text.to_s.presence
+    else
+      run.report_html_text.to_s.presence
+    end
   end
 end

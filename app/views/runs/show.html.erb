@@ -89,30 +89,56 @@
     </div>
   </div>
 
+  <% if @failed_executions.any? %>
+    <div class="card">
+      <h2>Failures</h2>
+      <ul class="failure-list">
+        <% @failed_executions.first(10).each do |ex| %>
+          <li>
+            <strong><%= ex[:method] %> <%= ex[:status] || "-" %></strong>
+            <span><%= ex[:name] %></span>
+            <% if ex[:error].present? %>
+              <div class="failure-detail"><%= ex[:error] %></div>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
   <div class="card">
-    <div class="filter-bar">
-      <button class="chip active" data-filter="all">All</button>
-      <button class="chip" data-filter="2">2xx</button>
-      <button class="chip" data-filter="3">3xx</button>
-      <button class="chip" data-filter="4">4xx</button>
-      <button class="chip" data-filter="5">5xx</button>
-      <button class="chip" data-filter="error">Errors</button>
+    <div class="table-toolbar">
+      <div class="filter-bar">
+        <button class="chip active" data-filter="all">All</button>
+        <button class="chip" data-filter="2">2xx</button>
+        <button class="chip" data-filter="3">3xx</button>
+        <button class="chip" data-filter="4">4xx</button>
+        <button class="chip" data-filter="5">5xx</button>
+        <button class="chip" data-filter="error">Errors</button>
+      </div>
+      <input class="table-search" type="text" placeholder="Search method, name, url..." />
     </div>
 
     <div class="table-wrap">
       <table class="runs-table" id="exec-table">
         <thead>
           <tr>
-            <th>Method</th>
-            <th>Status</th>
-            <th>Time</th>
-            <th>Name</th>
-            <th>URL</th>
+            <th data-sort="method">Method</th>
+            <th data-sort="status">Status</th>
+            <th data-sort="time">Time</th>
+            <th data-sort="name">Name</th>
+            <th data-sort="url">URL</th>
           </tr>
         </thead>
         <tbody>
           <% @executions.each do |ex| %>
-            <tr data-status-group="<%= ex[:status_group] %>" data-failed="<%= ex[:failed] || ex[:error].present? %>">
+            <tr data-status-group="<%= ex[:status_group] %>"
+                data-failed="<%= ex[:failed] || ex[:error].present? %>"
+                data-method="<%= ex[:method].to_s %>"
+                data-status="<%= ex[:status].to_i %>"
+                data-time="<%= ex[:time_ms].to_i %>"
+                data-name="<%= ex[:name].to_s %>"
+                data-url="<%= ex[:url].to_s %>">
               <td class="mono"><%= ex[:method] %></td>
               <td><%= ex[:status] || "-" %></td>
               <td><%= ex[:time_ms] ? "#{ex[:time_ms]} ms" : "-" %></td>
@@ -127,8 +153,14 @@
 <% end %>
 
 <div class="card">
-  <h2>Live Logs</h2>
-  <pre class="log" id="log-stream" data-run-id="<%= @run.id %>" data-status="<%= @run.status %>"><%= @run.stdout.to_s %></pre>
+  <div class="log-header">
+    <h2>Live Logs</h2>
+    <div class="log-actions">
+      <button class="btn ghost" id="log-toggle">Auto-scroll: on</button>
+      <button class="btn ghost" id="log-copy">Copy</button>
+    </div>
+  </div>
+  <pre class="log" id="log-stream" data-run-id="<%= @run.id %>" data-status="<%= @run.status %>"><%= @run.log_text.to_s %></pre>
 </div>
 
 <div class="card">
@@ -146,35 +178,100 @@
     if (!logEl) return;
 
     var status = logEl.dataset.status;
+    var autoScroll = true;
+    var toggleBtn = document.getElementById("log-toggle");
+    var copyBtn = document.getElementById("log-copy");
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", function() {
+        autoScroll = !autoScroll;
+        toggleBtn.textContent = "Auto-scroll: " + (autoScroll ? "on" : "off");
+      });
+    }
+    if (copyBtn) {
+      copyBtn.addEventListener("click", function() {
+        navigator.clipboard.writeText(logEl.textContent || "");
+      });
+    }
+
     if (status === "queued" || status === "running") {
       var source = new EventSource("/runs/" + logEl.dataset.runId + "/stream");
       source.onmessage = function(ev) {
         logEl.textContent += ev.data + "\n";
-        logEl.scrollTop = logEl.scrollHeight;
+        if (autoScroll) {
+          logEl.scrollTop = logEl.scrollHeight;
+        }
       };
       source.onerror = function() {
         source.close();
       };
     }
 
+    var searchInput = document.querySelector(".table-search");
     var chips = document.querySelectorAll(".chip");
     var rows = document.querySelectorAll("#exec-table tbody tr");
+    var currentFilter = "all";
+
     chips.forEach(function(chip) {
       chip.addEventListener("click", function() {
         chips.forEach(function(c) { c.classList.remove("active"); });
         chip.classList.add("active");
-        var filter = chip.dataset.filter;
-        rows.forEach(function(row) {
-          if (filter === "all") {
-            row.style.display = "";
-            return;
+        currentFilter = chip.dataset.filter;
+        applyFilters();
+      });
+    });
+
+    if (searchInput) {
+      searchInput.addEventListener("input", applyFilters);
+    }
+
+    function applyFilters() {
+      var query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+      rows.forEach(function(row) {
+        var passesFilter = true;
+        if (currentFilter !== "all") {
+          if (currentFilter === "error") {
+            passesFilter = row.dataset.failed === "true";
+          } else {
+            passesFilter = row.dataset.statusGroup === currentFilter;
           }
-          if (filter === "error") {
-            row.style.display = row.dataset.failed === "true" ? "" : "none";
-            return;
+        }
+        if (!passesFilter) {
+          row.style.display = "none";
+          return;
+        }
+        if (!query) {
+          row.style.display = "";
+          return;
+        }
+        var haystack = [
+          row.dataset.method,
+          row.dataset.name,
+          row.dataset.url,
+          row.dataset.status,
+          row.dataset.time
+        ].join(" ").toLowerCase();
+        row.style.display = haystack.includes(query) ? "" : "none";
+      });
+    }
+
+    document.querySelectorAll("#exec-table thead th[data-sort]").forEach(function(th) {
+      th.addEventListener("click", function() {
+        var key = th.dataset.sort;
+        var dir = th.dataset.dir === "asc" ? "desc" : "asc";
+        th.dataset.dir = dir;
+        var sorted = Array.from(rows).sort(function(a, b) {
+          var av = a.dataset[key] || "";
+          var bv = b.dataset[key] || "";
+          var num = key === "status" || key === "time";
+          if (num) {
+            av = Number(av);
+            bv = Number(bv);
+            return dir === "asc" ? av - bv : bv - av;
           }
-          row.style.display = row.dataset.statusGroup === filter ? "" : "none";
+          return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
         });
+        var tbody = document.querySelector("#exec-table tbody");
+        sorted.forEach(function(row) { tbody.appendChild(row); });
       });
     });
   })();

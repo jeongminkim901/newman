@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_11_002000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_11_003000) do
   create_table "runs", force: :cascade do |t|
     t.string "collection_path", null: false
     t.datetime "created_at", null: false
@@ -20,10 +20,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_11_002000) do
     t.datetime "finished_at"
     t.text "input_vars_json"
     t.string "log_path"
+    t.text "log_text"
     t.string "name"
     t.datetime "queued_at"
     t.string "report_html_path"
+    t.text "report_html_text"
     t.string "report_json_path"
+    t.text "report_json_text"
     t.string "run_mode", default: "sync", null: false
     t.datetime "started_at"
     t.string "status", default: "queued", null: false

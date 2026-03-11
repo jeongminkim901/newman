@@ -271,6 +271,24 @@ textarea {
   flex-wrap: wrap;
 }
 
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.table-search {
+  min-width: 240px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+}
+
 .chip {
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.04);
@@ -290,6 +308,39 @@ textarea {
 
 .table-wrap {
   overflow-x: auto;
+}
+
+.failure-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.failure-list li {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.failure-detail {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.log-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .mono {

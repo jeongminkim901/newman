@@ -23,7 +23,7 @@ jobs:
         run: chmod +x bin/*
 
       - name: Scan for common Rails security vulnerabilities using static analysis
-        run: bundle exec brakeman --no-pager --no-exit-on-warn
+        run: bundle exec brakeman --no-pager
       
       - name: Scan for known security vulnerabilities in gems used
         run: bundle exec bundler-audit

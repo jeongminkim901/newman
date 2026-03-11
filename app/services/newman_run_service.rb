@@ -4,6 +4,7 @@
   require "fileutils"
 
   LOG_BUFFER_LIMIT = 20000
+  LOG_FLUSH_INTERVAL = 0.8
 
   def self.execute!(run)
     new(run).execute!
@@ -59,6 +60,8 @@
 
     stdout_buffer = +""
     stderr_buffer = +""
+    log_text = @run.log_text.to_s.dup
+    last_flush_at = Time.current
 
     File.open(log_path, "a") do |log|
       log.sync = true
@@ -70,6 +73,8 @@
           stdout.each_line do |line|
             log.write("[stdout] #{line}")
             stdout_buffer = append_buffer(stdout_buffer, line)
+            log_text = append_buffer(log_text, line)
+            last_flush_at = flush_log_if_needed(log_text, last_flush_at)
           end
         end
 
@@ -77,6 +82,8 @@
           stderr.each_line do |line|
             log.write("[stderr] #{line}")
             stderr_buffer = append_buffer(stderr_buffer, line)
+            log_text = append_buffer(log_text, line)
+            last_flush_at = flush_log_if_needed(log_text, last_flush_at)
           end
         end
 
@@ -87,13 +94,19 @@
         finished_at = Time.current
         duration_ms = ((finished_at - @run.started_at) * 1000).to_i
 
+        report_json_text = read_file_safely(report_json_path)
+        report_html_text = read_file_safely(report_html_path)
+
         @run.update!(
           status: status.success? ? "success" : "failed",
           finished_at: finished_at,
           duration_ms: duration_ms,
           exit_code: status.exitstatus,
           stdout: stdout_buffer,
-          stderr: stderr_buffer
+          stderr: stderr_buffer,
+          report_json_text: report_json_text,
+          report_html_text: report_html_text,
+          log_text: log_text
         )
       end
     end
@@ -130,5 +143,18 @@
     buffer << line
     buffer = buffer[-LOG_BUFFER_LIMIT..] if buffer.length > LOG_BUFFER_LIMIT
     buffer
+  end
+
+  def flush_log_if_needed(log_text, last_flush_at)
+    return last_flush_at if Time.current - last_flush_at < LOG_FLUSH_INTERVAL
+
+    @run.update_column(:log_text, log_text)
+    Time.current
+  end
+
+  def read_file_safely(path)
+    return nil unless path && File.exist?(path)
+
+    File.read(path)
   end
 end
