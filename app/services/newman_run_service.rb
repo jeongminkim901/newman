@@ -14,7 +14,7 @@
   end
 
   def execute!
-    run_dir = Rails.root.join("storage", "runs", @run.id.to_s)
+    run_dir = Rails.root.join("storage", "runs", @run.id.to_i.to_s)
     FileUtils.mkdir_p(run_dir)
 
     collection_path = @run.collection_path || run_dir.join("collection.json").to_s
@@ -54,8 +54,8 @@
       "--report-json", report_json_path.to_s,
       "--report-html", report_html_path.to_s
     ]
-    cmd += ["--environment", environment_path.to_s] if environment_path.present?
-    cmd += ["--vars", vars_path.to_s] if vars_path.present?
+    cmd += [ "--environment", environment_path.to_s ] if environment_path.present?
+    cmd += [ "--vars", vars_path.to_s ] if vars_path.present?
 
     stdout_buffer = +""
     stderr_buffer = +""
@@ -99,7 +99,7 @@
     end
   rescue => e
     @run.status = "failed" if @run&.persisted?
-    @run.stderr = [@run.stderr, e.class.name, e.message].compact.join("\n") if @run
+    @run.stderr = [ @run.stderr, e.class.name, e.message ].compact.join("\n") if @run
     @run.finished_at = Time.current if @run
     @run.save! if @run&.persisted?
     raise

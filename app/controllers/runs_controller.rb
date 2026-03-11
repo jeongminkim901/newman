@@ -28,7 +28,7 @@
 
     @run.save!
 
-    run_dir = Rails.root.join("storage", "runs", @run.id.to_s)
+    run_dir = run_dir_for(@run)
     FileUtils.mkdir_p(run_dir)
 
     collection_path = run_dir.join("collection.json")
@@ -71,7 +71,7 @@
     render :new, status: :unprocessable_entity
   rescue => e
     @run.status = "failed" if @run&.persisted?
-    @run.stderr = [@run.stderr, e.class.name, e.message].compact.join("\n") if @run
+    @run.stderr = [ @run.stderr, e.class.name, e.message ].compact.join("\n") if @run
     @run.finished_at = Time.current if @run
     @run.save! if @run&.persisted?
     raise
@@ -79,21 +79,15 @@
 
   def show
     @run = Run.find(params[:id])
-    @report = load_report(@run.report_json_path)
+    @report = load_report(report_path_for(@run, "json"))
     @executions = build_executions(@report)
     @stats = build_stats(@executions)
   end
 
   def report
     @run = Run.find(params[:id])
-    kind = params[:kind]
-    path = case kind
-    when "json" then @run.report_json_path
-    when "html" then @run.report_html_path
-    else nil
-    end
-
-    if path.present? && File.exist?(path)
+    path = report_path_for(@run, params[:kind])
+    if path && File.exist?(path)
       send_file path, disposition: "inline"
     else
       redirect_to run_path(@run), alert: "Report not found"
@@ -106,12 +100,12 @@
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
 
-    log_path = @run.log_path
+    log_path = log_path_for(@run)
     last_pos = 0
 
     begin
       loop do
-        if log_path.present? && File.exist?(log_path)
+        if log_path && File.exist?(log_path)
           File.open(log_path, "r") do |file|
             file.seek(last_pos)
             file.each_line do |line|
@@ -206,5 +200,24 @@
       client_error: groups[4]&.length.to_i,
       server_error: groups[5]&.length.to_i
     }
+  end
+
+  def run_dir_for(run)
+    Rails.root.join("storage", "runs", run.id.to_i.to_s)
+  end
+
+  def report_path_for(run, kind)
+    file_name = case kind
+    when "json" then "report.json"
+    when "html" then "report.html"
+    else nil
+    end
+    return nil if file_name.nil?
+
+    run_dir_for(run).join(file_name).to_s
+  end
+
+  def log_path_for(run)
+    run_dir_for(run).join("run.log").to_s
   end
 end
