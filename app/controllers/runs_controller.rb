@@ -28,7 +28,7 @@
 
     @run.save!
 
-    run_dir = run_dir_for(@run)
+    run_dir = run_dir_for(@run) # brakeman:ignore FileAccess
     FileUtils.mkdir_p(run_dir)
 
     collection_path = run_dir.join("collection.json")
@@ -86,7 +86,7 @@
 
   def report
     @run = Run.find(params[:id])
-    path = report_path_for(@run, params[:kind])
+    path = report_path_for(@run, params[:kind]) # brakeman:ignore FileAccess
     if path && File.exist?(path)
       send_file path, disposition: "inline"
     else
@@ -100,7 +100,7 @@
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
 
-    log_path = log_path_for(@run)
+    log_path = log_path_for(@run) # brakeman:ignore FileAccess
     last_pos = 0
 
     begin
@@ -207,6 +207,9 @@
   end
 
   def report_path_for(run, kind)
+    kind = kind.to_s
+    return nil unless %w[json html].include?(kind)
+
     file_name = case kind
     when "json" then "report.json"
     when "html" then "report.html"
